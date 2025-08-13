@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexora Mini Navigateur</title>
+  <style>
+    body { margin:0; font-family: Arial, sans-serif; }
+    header { display:flex; align-items:center; background:#333; color:#fff; padding:10px; flex-wrap: wrap; }
+    header h1 { margin:0; flex:1; font-size:1.5em; }
+    header button { margin-left:5px; padding:5px 10px; cursor:pointer; }
+    #urlBar { width:60%; padding:5px; margin-right:5px; }
+    #iframeContainer { width:100%; height:calc(100vh - 50px); }
+    iframe { width:100%; height:100%; border:none; }
+    #pinButtons { margin-left:5px; display:flex; flex-wrap: wrap; }
+    .pin-btn { margin-right:5px; margin-top:2px; padding:5px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Nexora</h1>
+    <input type="text" id="urlBar" placeholder="Entrez l'URL">
+    <button onclick="go()">Aller</button>
+    <button onclick="reloadPage()">Recharger</button>
+    <button onclick="home()">Accueil</button>
+    <button onclick="pinURL()">Épingler une URL</button>
+    <button onclick="removePin()">Retirer une épingle</button>
+    <div id="pinButtons"></div>
+  </header>
+  <div id="iframeContainer">
+    <iframe id="view" src=""></iframe>
+  </div>
+
+  <script>
+    const urlInput = document.getElementById('urlBar');
+    const view = document.getElementById('view');
+    const pinButtonsContainer = document.getElementById('pinButtons');
+
+    const blockedSites = ["youtube.com", "google.com", "facebook.com", "newgrounds.com"];
+
+    let pins = JSON.parse(localStorage.getItem('nexoraPins')) || [];
+
+    function updatePinButtons() {
+      pinButtonsContainer.innerHTML = '';
+      pins.forEach(pin => {
+        const btn = document.createElement('button');
+        btn.textContent = pin.name;
+        btn.className = 'pin-btn';
+        btn.onclick = () => loadURL(pin.url);
+        pinButtonsContainer.appendChild(btn);
+      });
+    }
+
+    function go() {
+      let url = urlInput.value.trim();
+      if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://" + url;
+
+      const isBlocked = blockedSites.some(site => url.includes(site));
+
+      if (isBlocked) {
+        window.location.href = url;
+      } else {
+        view.src = url;
+
+        // Détection si l'iframe ne charge pas au bout de 10 sec
+        const timer = setTimeout(() => {
+          alert("Impossible de charger le site dans l'iframe, redirection...");
+          window.location.href = url;
+        }, 10000);
+
+        view.onload = () => clearTimeout(timer);
+      }
+
+      urlInput.value = url;
+    }
+
+    function loadURL(url) {
+      urlInput.value = url;
+      go();
+    }
+
+    function reloadPage() {
+      if (view.src) view.src = view.src;
+    }
+
+    function home() {
+      view.src = '';
+      urlInput.value = '';
+    }
+
+    function pinURL() {
+      if (pins.length >= 3) {
+        alert("Maximum 3 épingles !");
+        return;
+      }
+      const url = prompt("Entrez l'URL à épingler :");
+      if (!url) return;
+      const name = prompt("Entrez le nom du bouton :");
+      if (!name) return;
+      pins.push({name, url});
+      localStorage.setItem('nexoraPins', JSON.stringify(pins));
+      updatePinButtons();
+    }
+
+    function removePin() {
+      const name = prompt("Entrez le nom du bouton à retirer :");
+      if (!name) return;
+      pins = pins.filter(p => p.name !== name);
+      localStorage.setItem('nexoraPins', JSON.stringify(pins));
+      updatePinButtons();
+    }
+
+    // Initialisation
+    updatePinButtons();
+  </script>
+</body>
+</html>
